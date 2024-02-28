@@ -1,113 +1,458 @@
-import Image from "next/image";
+"use client";
+import {
+  Button,
+  Card,
+  CardBody,
+  Chip,
+  Input,
+  Select,
+  SelectItem,
+  cn,
+} from "@nextui-org/react";
+import Lottie from "lottie-react";
+import { useEffect, useState } from "react";
+import Countdown from "react-countdown";
+import { toast } from "sonner";
+import dice from "@/public/dice.json";
+import { useClerk, useUser } from "@clerk/nextjs";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useHistory } from "@/hooks/use-cau";
+import { Doc } from "@/convex/_generated/dataModel";
+import { motion } from "framer-motion";
 
 export default function Home() {
+  const { signOut } = useClerk();
+  const { history, setHistory } = useHistory();
+  const { user } = useUser();
+  const update = useMutation(api.user.update);
+  const u = useQuery(api.user.getUserByUser, { userId: user?.id! });
+
+  const tiencuoc = [
+    {
+      value: 1000,
+      label: "1K",
+    },
+    {
+      value: 10000,
+      label: "10K",
+    },
+    {
+      value: 50000,
+      label: "50K",
+    },
+    {
+      value: 100000,
+      label: "100K",
+    },
+    {
+      value: 500000,
+      label: "500K",
+    },
+    {
+      value: 1000000,
+      label: "1M",
+    },
+    {
+      value: 5000000,
+      label: "5M",
+    },
+    {
+      value: 10000000,
+      label: "10M",
+    },
+    {
+      value: 50000000,
+      label: "50M",
+    },
+  ];
+  const [isRandom, setIsRandom] = useState(false);
+  const [bet, setBet] = useState<{ bet0: number; bet1: number; mode: 0 | 1 }>({
+    bet0: 0,
+    bet1: 0,
+    mode: 0,
+  });
+  const [isBet, setIsBet] = useState(false);
+  const [tien, setTien] = useState(0);
+
+  const tinhtien = () => {
+    const so = play();
+    if (u?.coin) {
+      if (isBet) {
+        if (so > 4 && so < 10) {
+          setHistory([...history, "Tài"]);
+          update({ id: u?._id, coin: u?.coin + bet.bet0 - bet.bet1 });
+        } else if (so > 10 && so < 17) {
+          setHistory([...history, "Xỉu"]);
+          update({ id: u?._id, coin: u?.coin - bet.bet0 + bet.bet1 });
+        }
+
+        setBet({ bet0: 0, bet1: 0, mode: 0 });
+        setIsBet(false);
+      }
+      if (so > 4 && so < 10) {
+        setHistory([...history, "Tài"]);
+      } else if (so > 10 && so < 17) {
+        setHistory([...history, "Xỉu"]);
+      }
+    }
+  };
+  const renderer = ({ hours, minutes, seconds, completed }: any) => {
+    if (completed) {
+      return <XocDia setIsRandom={setIsRandom} tinhtien={tinhtien} />;
+    } else {
+      return (
+        <div className=" w-full p-8 bg-[#200901] text-[#E4BE4B] rounded-full flex items-center justify-center text-5xl">
+          <span>{seconds}</span>
+        </div>
+      );
+    }
+  };
+  const handleNap = () => {
+    if (u?.coin) {
+      update({ id: u?._id, coin: u?.coin + 100000000 });
+    }
+  };
+  useEffect(() => {
+    if (user?.fullName) {
+      if (u?.username === "") {
+        update({ id: u._id, username: user.fullName });
+      }
+    }
+  }, []);
+  if (!user?.id || !u?.coin) {
+    return null;
+  }
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <div className=" w-full h-full overflow-hidden  bg-gradient-to-br from-[#8C6339] via-[#C9AF86] to-[#47240D]">
+      <div className=" absolute top-0 left-0 w-[100dvw] z-10 flex items-center p-3">
+        <Chip className="from-[#8C6339] via-[#C9AF86] to-[#FFEBBC] bg-gradient-to-br ml-auto flex gap-3 py-10 text-3xl px-10 ">
+          <span> {user.fullName}</span>
+          <span className="ml-2 font-semibold">
+            {formatNumberWithCommas(u?.coin!)}
+          </span>
+        </Chip>
+        <Button
+          onPress={handleNap}
+          className="text-[#FFAEC0] text-xl bg-gradient-to-tl from-[#51041D] via-[#50041D] to-[#FFAEC0] ml-auto"
+        >
+          Nạp tiền
+        </Button>
+        <Button
+          onPress={() => signOut()}
+          className="text-[#FFAEC0] text-xl bg-gradient-to-tl from-[#51041D] via-[#50041D] to-[#FFAEC0] ml-auto"
+        >
+          Đăng xuất
+        </Button>
+      </div>
+
+      <div className=" w-[100vw] h-[100vh] px-40 relative flex sm:flex-row flex-col items-center justify-center">
+        <div className=" flex items-center gap-5">
+          <div className="flex flex-col items-center justify-center">
+            <Card>
+              <CardBody className=" bg-gradient-to-br from-[#8C6339] via-[#C9AF86] to-[#FFEBBC]">
+                <div className="flex flex-col gap-3">
+                  <span className=" font-bold text-3xl flex items-center justify-center">
+                    {"TÀI XỈU REAL UY TÍN SỐ 1"}
+                  </span>
+                  <div className=" flex items-center gap-5 justify-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <Chip
+                        className={cn(
+                          " text-5xl h-[100px] px-16 shadow-inner bg-gradient-to-tl from-[#8C6339] via-[#C9AF86] to-[#FFEBBC] duration-300"
+                        )}
+                      >
+                        Tài
+                      </Chip>
+                      <Chip className="bg-[#62011A] text-[#EACD6C] text-xl">
+                        {formatNumberWithCommas(bet.bet0)}
+                      </Chip>
+                      <Button
+                        onPress={() =>
+                          setBet({ bet0: bet.bet0, bet1: bet.bet1, mode: 0 })
+                        }
+                        className="bg-[#200901] text-[#E4BE4B]"
+                      >
+                        Đặt cược
+                      </Button>
+                    </div>
+                    {isRandom ? (
+                      <div className=" w-full p-5 bg-[#200901] text-[#E4BE4B] rounded-full flex items-center justify-center">
+                        <Lottie animationData={dice} width={300} />
+                      </div>
+                    ) : (
+                      <Countdown
+                        date={Date.now() + 10000}
+                        renderer={renderer}
+                      />
+                    )}
+
+                    <div className="flex flex-col items-center gap-2">
+                      <Chip
+                        className={cn(
+                          " text-5xl h-[100px] px-16 shadow-inner bg-gradient-to-tl from-[#8C6339] via-[#C9AF86] to-[#FFEBBC] duration-500"
+                        )}
+                      >
+                        Xỉu
+                      </Chip>
+                      <Chip className="bg-[#62011A] text-[#EACD6C] text-xl">
+                        {formatNumberWithCommas(bet.bet1)}
+                      </Chip>
+
+                      <Button
+                        onPress={() =>
+                          setBet({ bet0: bet.bet0, bet1: bet.bet1, mode: 1 })
+                        }
+                        className="bg-[#200901] text-[#E4BE4B]"
+                      >
+                        Đặt cược
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {tiencuoc.map((item, index) => (
+                      <Button
+                        onPress={() => {
+                          if (bet.mode === 1) {
+                            setBet({
+                              bet0: bet.bet0,
+                              bet1: bet.bet1 + item.value,
+                              mode: bet.mode,
+                            });
+                          } else {
+                            setBet({
+                              bet0: bet.bet0 + item.value,
+                              bet1: bet.bet1,
+                              mode: bet.mode,
+                            });
+                          }
+                        }}
+                        className="bg-[#62011A] text-[#EACD6C] text-xl border-3 border-[#EACD6C]"
+                        key={index}
+                      >
+                        {item.label}
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {history.slice(-12).map((item, index) => (
+                      <Chip
+                        className="bg-[#62011A] text-[#EACD6C] text-xl border-3 border-[#EACD6C]"
+                        key={index}
+                      >
+                        {item}
+                      </Chip>
+                    ))}
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+            <div className=" flex items-center justify-center gap-3 mt-5">
+              <Button
+                onPress={() => {
+                  if (bet.mode === 1) {
+                    setBet({
+                      bet0: bet.bet0,
+                      bet1: bet.bet1 + u.coin!,
+                      mode: bet.mode,
+                    });
+                  } else {
+                    setBet({
+                      bet0: bet.bet0 + u.coin!,
+                      bet1: bet.bet1,
+                      mode: bet.mode,
+                    });
+                  }
+                }}
+                variant="shadow"
+                className=" rounded-full text-[#F9DFAD] text-xl px-8 py-5 font-semibold bg-gradient-to-tl from-[#2F0838] via-[#D67ED6] to-[#4F2C0F]"
+              >
+                ALL-IN
+              </Button>
+              <Button
+                onPress={() => {
+                  if (u.coin! < bet.bet0 + bet.bet1) {
+                    toast.error("Không đủ tiền cược.");
+                  } else {
+                    setIsBet(true);
+                  }
+                }}
+                variant="shadow"
+                className=" rounded-full text-[#E3DDCF] text-3xl px-10 py-7 font-semibold bg-gradient-to-tl from-[#532B06] via-[#D9C494] to-[#73480C]"
+              >
+                {isBet ? "Đã đặt cược" : "Đặt cược"}
+              </Button>
+
+              <Button
+                onPress={() => {
+                  setIsBet(false);
+                  setBet({ bet0: 0, bet1: 0, mode: 0 });
+                }}
+                variant="shadow"
+                className=" rounded-full text-[#FFAEC0] text-xl px-8 py-5 font-semibold bg-gradient-to-tl from-[#51041D] via-[#50041D] to-[#FFAEC0]"
+              >
+                Hủy
+              </Button>
+            </div>
+          </div>
+          <AutoPlay u={u} />
         </div>
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    </div>
   );
 }
+const XocDia = ({
+  setIsRandom,
+  tinhtien,
+}: {
+  setIsRandom: (v: boolean) => void;
+  tinhtien: () => void;
+}) => {
+  const renderer = ({ hours, minutes, seconds, completed }: any) => {
+    if (completed) {
+      return <XocDia tinhtien={tinhtien} setIsRandom={setIsRandom} />;
+    } else {
+      return (
+        <div className=" w-full p-8 bg-[#200901] text-[#E4BE4B] rounded-full flex items-center justify-center text-5xl">
+          <span>{seconds}</span>
+        </div>
+      );
+    }
+  };
+
+  useEffect(() => {
+    setIsRandom(true);
+    (async () => {
+      setTimeout(() => {
+        setIsRandom(false);
+        tinhtien();
+      }, 4000);
+    })();
+  }, []);
+
+  return <Countdown date={Date.now() + 30000} renderer={renderer} />;
+};
+const AutoPlay = ({ u }: { u: Doc<"user"> }) => {
+  const update = useMutation(api.user.update);
+  const [sotran, setSoTran] = useState<number>(100);
+  const [percent, setPercent] = useState<number>(25);
+  const [coin, setCoin] = useState<number>(25000);
+  const [mode, setMode] = useState<number>(2);
+  const modes = [
+    {
+      key: 1,
+      value: "Đánh theo tiền",
+    },
+    {
+      key: 2,
+      value: "Đánh theo %",
+    },
+  ];
+  const handleAuto = () => {
+    if (u.coin) {
+      let tien: number = u.coin;
+      if (mode === 1) {
+        for (let i = 0; i < sotran; i++) {
+          const so = play();
+          const so1 = play();
+
+          if (
+            (so > 4 && so < 10 && so1 > 4 && so1 < 10) ||
+            (so > 10 && so < 17 && so1 > 10 && so1 < 17)
+          ) {
+            tien += coin;
+          } else {
+            tien -= coin;
+          }
+        }
+      } else if (mode === 2) {
+        for (let i = 0; i < sotran; i++) {
+          const so = play();
+          const so1 = play();
+
+          if (
+            (so > 4 && so < 10 && so1 > 4 && so1 < 10) ||
+            (so > 10 && so < 17 && so1 > 10 && so1 < 17)
+          ) {
+            tien += (tien * percent) / 100;
+          } else {
+            tien -= (tien * percent) / 100;
+          }
+        }
+      }
+
+      update({ id: u?._id, coin: tien });
+    }
+  };
+  return (
+    <Card>
+      <CardBody className=" bg-gradient-to-br from-[#8C6339] via-[#C9AF86] to-[#FFEBBC]">
+        <div className="flex flex-col gap-3">
+          <div className=" text-3xl font-semibold ">
+            Chế độ Auto {"(Uy tín)"}
+          </div>
+          <Input
+            type="number"
+            label="% Cược"
+            variant="bordered"
+            value={percent.toString()}
+            onValueChange={(v) => setPercent(parseFloat(v))}
+            className="max-w-xs"
+            endContent={"%"}
+          />
+          <Input
+            type="number"
+            label="Số tiền cược"
+            variant="bordered"
+            value={coin.toString()}
+            onValueChange={(v) => setCoin(parseFloat(v))}
+            className="max-w-xs"
+            endContent={"VND"}
+          />
+          <Input
+            type="number"
+            label="Số trận"
+            variant="bordered"
+            value={sotran.toString()}
+            onValueChange={(v) => setSoTran(parseFloat(v))}
+            className="max-w-xs"
+          />
+          <Select
+            defaultSelectedKeys={["2"]}
+            label="Chế độ chơi"
+            className="max-w-xs"
+          >
+            {modes.map((item, index) => (
+              <SelectItem
+                onClick={() => setMode(item.key)}
+                className=" text-[#E4BE4B]"
+                key={item.key}
+                value={item.value}
+              >
+                {item.value}
+              </SelectItem>
+            ))}
+          </Select>
+          <Button
+            onPress={handleAuto}
+            className=" bg-gradient-to-br from-[#8C6339] via-[#C9AF86] to-[#8C6339]"
+          >
+            Auto
+          </Button>
+        </div>
+      </CardBody>
+    </Card>
+  );
+};
+function formatNumberWithCommas(number: number): string {
+  return Math.round(number)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+const play = () => {
+  const xx1 = Math.floor(Math.random() * 6) + 1;
+  const xx2 = Math.floor(Math.random() * 6) + 1;
+  const xx3 = Math.floor(Math.random() * 6) + 1;
+  return xx1 + xx2 + xx3;
+};
